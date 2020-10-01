@@ -5,21 +5,21 @@ metadata:
   labels:
     app: paascache
     app.kubernetes.io/managed-by: isp-managedcache
-  name: ${TENANT_NAME}
-  namespace: ${TENANT_NAMESPACE}
+  name: {TENANT_NAME}
+  namespace: {TENANT_NAMESPACE}
 spec:
-  name: ${TENANT_NAME}
-  cacheProvider: ${TENANT_PROVIDER}
-  cacheNamespace: ${TENANT_NAMESPACE}
-  enviroment: ${ENVIROMENT}
+  name: {TENANT_NAME}
+  cacheProvider: {TENANT_PROVIDER}
+  cacheNamespace: {TENANT_NAMESPACE}
+  enviroment: {ENVIROMENT}
   regions:
   additionalCacheSpec:
     hazelcast:
       baseImage:
-        namespace: ${HZMANCENTER_BASEIMAGE_NAMESPACE}
-        name: ${HZMANCENTER_BASEIMAGE_NAMESPACE}
-        tag: ${HZMANCENTER_BASEIMAGE_TAG}
-      containerPort: ${HZMANCENTER_CONTAINER_PORT}
-      healtcheckPort: ${HZMANCENTER_HEALTHCHECK_PORT}
-      hostname: ${HZMANCENTER_HTTP_HOSTNAME}
-      path: ${HZMANCENTER_PATH_HTTP}
+        namespace: {HZMANCENTER_BASEIMAGE_NAMESPACE}
+        name: {HZMANCENTER_BASEIMAGE_NAMESPACE}
+        tag: {HZMANCENTER_BASEIMAGE_TAG}
+      containerPort: {HZMANCENTER_CONTAINER_PORT}
+      healtcheckPort: {HZMANCENTER_HEALTHCHECK_PORT}
+      hostname: {HZMANCENTER_HTTP_HOSTNAME}
+      path: {HZMANCENTER_PATH_HTTP}
