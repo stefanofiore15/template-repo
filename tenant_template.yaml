@@ -2,20 +2,20 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: mdg-{TENANT_NAME}
+  name: mdg-${TENANT_NAME}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: mdg-{TENANT_NAMESPACE}-{TENANT_NAME}
+  name: mdg-${TENANT_NAMESPACE}-${TENANT_NAME}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: hazelcast-enterprise-isp
 subjects:
   - kind: ServiceAccount
-    name: mdg-{TENANT_NAME}
-    namespace: {TENANT_NAMESPACE}
+    name: mdg-${TENANT_NAME}
+    namespace: ${TENANT_NAMESPACE}
 ---
 apiVersion: v1
 data:
@@ -25,11 +25,11 @@ metadata:
   labels:
     app-type: hazelcast-management-center
     app.kubernetes.io/component: management
-    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-{TENANT_NAME}
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
     app.kubernetes.io/name: paascache-HazelcastManagementCenter
     app.kubernetes.io/version: "4.0.1"
     cm-type: environment
-  name: 'app-env-mdg-{TENANT_NAME}-hazelcast-management-center-v1'
+  name: 'app-env-mdg-${TENANT_NAME}-hazelcast-management-center-v1'
 ---
 apiVersion: v1
 data:
@@ -39,7 +39,7 @@ data:
         <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
             <layout class="ch.qos.logback.classic.PatternLayout">
-                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSSZ} %level [%logger] \(%thread\) %msg%n</Pattern>
+                <Pattern>%d${yyyy-MM-dd HH:mm:ss.SSSZ} %level [%logger] \(%thread\) %msg%n</Pattern>
             </layout>
         </appender>
         <logger level="WARN" name="org.eclipse.jetty">
@@ -69,11 +69,11 @@ metadata:
   labels:
     app-type: hazelcast-management-center
     app.kubernetes.io/component: management
-    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-$${TENANT_NAME}
     app.kubernetes.io/name: paascache-HazelcastManagementCenter
     app.kubernetes.io/version: "4.0.1"
     cm-type: logging
-  name: 'logback-${TENANT_NAME}-hazelcast-management-center-v1'
+  name: 'logback-$${TENANT_NAME}-hazelcast-management-center-v1'
 ---
 apiVersion: v1
 kind: DeploymentConfig
@@ -81,14 +81,14 @@ metadata:
   labels:
     app-type: hazelcast-management-center
     app.kubernetes.io/component: management
-    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-$${TENANT_NAME}
     app.kubernetes.io/name: paascache-HazelcastManagementCenter
     app.kubernetes.io/version: "4.0.1"
-  name: 'mdg-{TENANT_NAME}-hazelcast-management-center'
+  name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
 spec:
   replicas: 1
   selector:
-    deploymentConfig: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+    deploymentConfig: 'mdg-$${TENANT_NAME}-hazelcast-management-center'
   strategy:
     activeDeadlineSeconds: 21600
     resources:
@@ -105,21 +105,21 @@ spec:
   template:
     metadata:
       labels:
-        app: mdg-${TENANT_NAME}
-        cachebuckets.paascache.dsi.intesasanpaolo.com/tenant: ${TENANT_NAME}
+        app: mdg-$${TENANT_NAME}
+        cachebuckets.paascache.dsi.intesasanpaolo.com/tenant: $${TENANT_NAME}
         template: paascache-tenant-template
         template-version: 0.7.1
         app.kubernetes.io/version: "1.0"
         app.kubernetes.io/part-of: paascache
         app.kubernetes.io/managed-by: paascache-api
-        deploymentConfig: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+        deploymentConfig: 'mdg-$${TENANT_NAME}-hazelcast-management-center'
         log-version: '1.0'
         app-type: hazelcast-management-center
         app.kubernetes.io/component: management
-        app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
+        app.kubernetes.io/instance: paascache-HazelcastManagementCenter-$${TENANT_NAME}
         app.kubernetes.io/name: paascache-HazelcastManagementCenter
         app.kubernetes.io/version: "4.0.1"
-      name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+      name: 'mdg-$${TENANT_NAME}-hazelcast-management-center'
     spec:
       containers:
         - env:
@@ -137,8 +137,8 @@ spec:
                 -Dhazelcast.mc.allowMultipleLogin=true
                 -Dhazelcast.mc.rest.enabled=true
                 -Dhazelcast.mc.healthCheck.enable=true
-                -Dhazelcast.mc.http.port={HZMANCENTER_CONTAINER_PORT}
-                -Dhazelcast.mc.contextPath={HZMANCENTER_PATH_HTTP}
+                -Dhazelcast.mc.http.port=${HZMANCENTER_CONTAINER_PORT}
+                -Dhazelcast.mc.contextPath=${HZMANCENTER_PATH_HTTP}
             - name: JAVA_CLASSPATH
               value: >-
                 /deployments/*
@@ -164,28 +164,28 @@ spec:
                 secretKeyRef:
                   key: key
                   name: hz-license-key-secret
-          image: 'docker-registry.default.svc:5000/{HZMANCENTER_BASEIMAGE_NAMESPACE}/{HZMANCENTER_BASEIMAGE}:{HZMANCENTER_BASEIMAGE_TAG}'
+          image: 'docker-registry.default.svc:5000/${HZMANCENTER_BASEIMAGE_NAMESPACE}/${HZMANCENTER_BASEIMAGE}:${HZMANCENTER_BASEIMAGE_TAG}'
           imagePullPolicy: Always
           livenessProbe:
             failureThreshold: 3
             httpGet:
-              path: {HZMANCENTER_PATH_HTTP}/health
-              port: {HZMANCENTER_HEALTHCHECK_PORT}
+              path: ${HZMANCENTER_PATH_HTTP}/health
+              port: ${HZMANCENTER_HEALTHCHECK_PORT}
               scheme: HTTP
             initialDelaySeconds: 30
             periodSeconds: 10
             successThreshold: 1
             timeoutSeconds: 3
-          name: 'mdg-{TENANT_NAME}-hazelcast-management-center'
+          name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
           ports:
-            - containerPort: {HZMANCENTER_CONTAINER_PORT}
+            - containerPort: ${HZMANCENTER_CONTAINER_PORT}
               name: http
               protocol: TCP
           readinessProbe:
             failureThreshold: 3
             httpGet:
-              path: {HZMANCENTER_PATH_HTTP}/health
-              port: {HZMANCENTER_HEALTHCHECK_PORT}
+              path: ${HZMANCENTER_PATH_HTTP}/health
+              port: ${HZMANCENTER_HEALTHCHECK_PORT}
               scheme: HTTP
             periodSeconds: 10
             successThreshold: 1
@@ -195,15 +195,15 @@ spec:
               name: logback-properties
             - mountPath: /usr/local/env
               name: setenv
-      securityContext: {}
-      serviceAccount: mdg-{TENANT_NAME}
+      securityContext: ${}
+      serviceAccount: mdg-${TENANT_NAME}
       terminationGracePeriodSeconds: 75
       volumes:
         - configMap:
-            name: 'logback-{TENANT_NAME}-hazelcast-management-center-v1'
+            name: 'logback-${TENANT_NAME}-hazelcast-management-center-v1'
           name: logback-properties
         - configMap:
-            name: 'app-env-mdg-{TENANT_NAME}-hazelcast-management-center-v1'
+            name: 'app-env-mdg-${TENANT_NAME}-hazelcast-management-center-v1'
           name: setenv
   triggers: []
 ---
@@ -213,36 +213,36 @@ metadata:
   labels:
     app-type: hazelcast-management-center
     app.kubernetes.io/component: management
-    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-{TENANT_NAME}
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
     app.kubernetes.io/name: paascache-HazelcastManagementCenter
     app.kubernetes.io/version: "4.0.1"
   annotations:
     description: The web server's http port.
-  name: 'mdg-{TENANT_NAME}-hazelcast-management-center'
+  name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
 spec:
   ports:
-    - port: {HZMANCENTER_CONTAINER_PORT}
+    - port: ${HZMANCENTER_CONTAINER_PORT}
       protocol: TCP
-      targetPort: '{HZMANCENTER_CONTAINER_PORT}'
+      targetPort: '${HZMANCENTER_CONTAINER_PORT}'
   selector:
-    deploymentConfig: 'mdg-{TENANT_NAME}-hazelcast-management-center'
+    deploymentConfig: 'mdg-${TENANT_NAME}-hazelcast-management-center'
 ---
 apiVersion: v1
-id: 'mdg-{TENANT_NAME}-hazelcast-management-center'
+id: 'mdg-${TENANT_NAME}-hazelcast-management-center'
 kind: Route
 metadata:
   labels:
     app-type: hazelcast-management-center
     app.kubernetes.io/component: management
-    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-{TENANT_NAME}
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
     app.kubernetes.io/name: paascache-HazelcastManagementCenter
     app.kubernetes.io/version: "4.0.1"
   annotations:
     description: Route for application's http service.
-  name: 'mdg-{TENANT_NAME}-hazelcast-management-center'
+  name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
 spec:
   # da rivedere la conformità con lo standard DNS
-  host: '{HZMANCENTER_HTTP_HOSTNAME}'
-  path: '{HZMANCENTER_PATH_HTTP}'
+  host: '${HZMANCENTER_HTTP_HOSTNAME}'
+  path: '${HZMANCENTER_PATH_HTTP}'
   to:
-    name: 'mdg-{TENANT_NAME}-hazelcast-management-center'
+    name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
