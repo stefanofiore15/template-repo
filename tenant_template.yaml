@@ -69,11 +69,11 @@ metadata:
   labels:
     app-type: hazelcast-management-center
     app.kubernetes.io/component: management
-    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-$${TENANT_NAME}
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
     app.kubernetes.io/name: paascache-HazelcastManagementCenter
     app.kubernetes.io/version: "4.0.1"
     cm-type: logging
-  name: 'logback-$${TENANT_NAME}-hazelcast-management-center-v1'
+  name: 'logback-${TENANT_NAME}-hazelcast-management-center-v1'
 ---
 apiVersion: v1
 kind: DeploymentConfig
@@ -81,14 +81,14 @@ metadata:
   labels:
     app-type: hazelcast-management-center
     app.kubernetes.io/component: management
-    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-$${TENANT_NAME}
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
     app.kubernetes.io/name: paascache-HazelcastManagementCenter
     app.kubernetes.io/version: "4.0.1"
   name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
 spec:
   replicas: 1
   selector:
-    deploymentConfig: 'mdg-$${TENANT_NAME}-hazelcast-management-center'
+    deploymentConfig: 'mdg-${TENANT_NAME}-hazelcast-management-center'
   strategy:
     activeDeadlineSeconds: 21600
     resources:
@@ -105,21 +105,21 @@ spec:
   template:
     metadata:
       labels:
-        app: mdg-$${TENANT_NAME}
-        cachebuckets.paascache.dsi.intesasanpaolo.com/tenant: $${TENANT_NAME}
+        app: mdg-${TENANT_NAME}
+        cachebuckets.paascache.dsi.intesasanpaolo.com/tenant: ${TENANT_NAME}
         template: paascache-tenant-template
         template-version: 0.7.1
         app.kubernetes.io/version: "1.0"
         app.kubernetes.io/part-of: paascache
         app.kubernetes.io/managed-by: paascache-api
-        deploymentConfig: 'mdg-$${TENANT_NAME}-hazelcast-management-center'
+        deploymentConfig: 'mdg-${TENANT_NAME}-hazelcast-management-center'
         log-version: '1.0'
         app-type: hazelcast-management-center
         app.kubernetes.io/component: management
-        app.kubernetes.io/instance: paascache-HazelcastManagementCenter-$${TENANT_NAME}
+        app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
         app.kubernetes.io/name: paascache-HazelcastManagementCenter
         app.kubernetes.io/version: "4.0.1"
-      name: 'mdg-$${TENANT_NAME}-hazelcast-management-center'
+      name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
     spec:
       containers:
         - env:
