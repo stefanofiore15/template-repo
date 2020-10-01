@@ -1,0 +1,248 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mdg-${TENANT_NAME}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mdg-${TENANT_NAMESPACE}-${TENANT_NAME}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: hazelcast-enterprise-isp
+subjects:
+  - kind: ServiceAccount
+    name: mdg-${TENANT_NAME}
+    namespace: ${TENANT_NAMESPACE}
+---
+apiVersion: v1
+data:
+  setenv-sh: ''
+kind: ConfigMap
+metadata:
+  labels:
+    app-type: hazelcast-management-center
+    app.kubernetes.io/component: management
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
+    app.kubernetes.io/name: paascache-HazelcastManagementCenter
+    app.kubernetes.io/version: "4.0.1"
+    cm-type: environment
+  name: 'app-env-mdg-${TENANT_NAME}-hazelcast-management-center-v1'
+---
+apiVersion: v1
+data:
+  logback.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <configuration>
+        <statusListener class="ch.qos.logback.core.status.NopStatusListener" />
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+            <layout class="ch.qos.logback.classic.PatternLayout">
+                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSSZ} %level [%logger] \(%thread\) %msg%n</Pattern>
+            </layout>
+        </appender>
+        <logger level="WARN" name="org.eclipse.jetty">
+            <appender-ref ref="STDOUT" />
+        </logger>
+        <logger level="WARN" name="org.springframework">
+            <appender-ref ref="STDOUT" />
+        </logger>
+        <logger level="WARN" name="org.hibernate.validator">
+            <appender-ref ref="STDOUT" />
+        </logger>
+        <logger level="WARN" name="org.flywaydb">
+            <appender-ref ref="STDOUT" />
+        </logger>
+        <logger level="WARN" name="com.zaxxer.hikari">
+            <appender-ref ref="STDOUT" />
+        </logger>
+        <logger level="ERROR" name="org.springframework.web.servlet.mvc.method.annotation.ExceptionHandlerExceptionResolver">
+            <appender-ref ref="STDOUT" />
+        </logger>
+        <root level="INFO">
+            <appender-ref ref="STDOUT" />
+        </root>
+    </configuration>
+kind: ConfigMap
+metadata:
+  labels:
+    app-type: hazelcast-management-center
+    app.kubernetes.io/component: management
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
+    app.kubernetes.io/name: paascache-HazelcastManagementCenter
+    app.kubernetes.io/version: "4.0.1"
+    cm-type: logging
+  name: 'logback-${TENANT_NAME}-hazelcast-management-center-v1'
+---
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app-type: hazelcast-management-center
+    app.kubernetes.io/component: management
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
+    app.kubernetes.io/name: paascache-HazelcastManagementCenter
+    app.kubernetes.io/version: "4.0.1"
+  name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+spec:
+  replicas: 1
+  selector:
+    deploymentConfig: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources:
+      requests:
+        cpu: 83m
+        memory: 118Mi
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 50%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        app: mdg-${TENANT_NAME}
+        cachebuckets.paascache.dsi.intesasanpaolo.com/tenant: ${TENANT_NAME}
+        template: paascache-tenant-template
+        template-version: 0.7.1
+        app.kubernetes.io/version: "1.0"
+        app.kubernetes.io/part-of: paascache
+        app.kubernetes.io/managed-by: paascache-api
+        deploymentConfig: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+        log-version: '1.0'
+        app-type: hazelcast-management-center
+        app.kubernetes.io/component: management
+        app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
+        app.kubernetes.io/name: paascache-HazelcastManagementCenter
+        app.kubernetes.io/version: "4.0.1"
+      name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+    spec:
+      containers:
+        - env:
+            - name: JAVA_OPTIONS
+              value: >-
+                -Duser.timezone=Europe/Rome
+                -Dapp-cfg.path=/usr/local/app-cfg/ -verbose:gc
+                -Xloggc:/var/tmp/gc.log -XX:+PrintGCDetails
+                -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation
+                -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M
+                -Dlogback.configurationFile=file:///usr/local/log/logback.xml
+                -Dhazelcast.client.statistics.enabled=true
+                -Dhazelcast.mc.home=/deployments
+                -Dhazelcast.mc.phone.home.enabled=false
+                -Dhazelcast.mc.allowMultipleLogin=true
+                -Dhazelcast.mc.rest.enabled=true
+                -Dhazelcast.mc.healthCheck.enable=true
+                -Dhazelcast.mc.http.port=${HZMANCENTER_CONTAINER_PORT}
+                -Dhazelcast.mc.contextPath=${HZMANCENTER_PATH_HTTP}
+            - name: JAVA_CLASSPATH
+              value: >-
+                /deployments/*
+            - name: JAVA_MAIN_CLASS
+              value: com.hazelcast.webmonitor.Launcher
+            - name: JAVA_ARGS
+            - name: JAVA_INITIAL_MEM_RATIO
+              value: '100'
+            - name: JAVA_MAX_MEM_RATIO
+              value: '60'
+            - name: GC_MAX_METASPACE_SIZE
+              value: '256'
+            - name: HTTPS_PROXY
+            - name: https_proxy
+            - name: HTTP_PROXY
+            - name: http_proxy
+            - name: no_proxy
+              value: '.svc,.cluster.local,.intesasanpaolo.com,.sanpaoloimi.com'
+            - name: NO_PROXY
+              value: '.svc,.cluster.local,.intesasanpaolo.com,.sanpaoloimi.com'
+            - name: HAZELCAST_ENTERPRISE_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: key
+                  name: hz-license-key-secret
+          image: 'docker-registry.default.svc:5000/${HZMANCENTER_BASEIMAGE_NAMESPACE}/${HZMANCENTER_BASEIMAGE}:${HZMANCENTER_BASEIMAGE_TAG}'
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: ${HZMANCENTER_PATH_HTTP}/health
+              port: ${HZMANCENTER_HEALTHCHECK_PORT}
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 3
+          name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+          ports:
+            - containerPort: ${HZMANCENTER_CONTAINER_PORT}
+              name: http
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: ${HZMANCENTER_PATH_HTTP}/health
+              port: ${HZMANCENTER_HEALTHCHECK_PORT}
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 3
+          volumeMounts:
+            - mountPath: /usr/local/log
+              name: logback-properties
+            - mountPath: /usr/local/env
+              name: setenv
+      securityContext: {}
+      serviceAccount: mdg-${TENANT_NAME}
+      terminationGracePeriodSeconds: 75
+      volumes:
+        - configMap:
+            name: 'logback-${TENANT_NAME}-hazelcast-management-center-v1'
+          name: logback-properties
+        - configMap:
+            name: 'app-env-mdg-${TENANT_NAME}-hazelcast-management-center-v1'
+          name: setenv
+  triggers: []
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app-type: hazelcast-management-center
+    app.kubernetes.io/component: management
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
+    app.kubernetes.io/name: paascache-HazelcastManagementCenter
+    app.kubernetes.io/version: "4.0.1"
+  annotations:
+    description: The web server's http port.
+  name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+spec:
+  ports:
+    - port: ${HZMANCENTER_CONTAINER_PORT}
+      protocol: TCP
+      targetPort: '${HZMANCENTER_CONTAINER_PORT}'
+  selector:
+    deploymentConfig: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+---
+apiVersion: v1
+id: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+kind: Route
+metadata:
+  labels:
+    app-type: hazelcast-management-center
+    app.kubernetes.io/component: management
+    app.kubernetes.io/instance: paascache-HazelcastManagementCenter-${TENANT_NAME}
+    app.kubernetes.io/name: paascache-HazelcastManagementCenter
+    app.kubernetes.io/version: "4.0.1"
+  annotations:
+    description: Route for application's http service.
+  name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
+spec:
+  # da rivedere la conformità con lo standard DNS
+  host: '${HZMANCENTER_HTTP_HOSTNAME}'
+  path: '${HZMANCENTER_PATH_HTTP}'
+  to:
+    name: 'mdg-${TENANT_NAME}-hazelcast-management-center'
