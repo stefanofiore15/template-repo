@@ -1,0 +1,565 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  data:
+    logback.xml: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <configuration>
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+          <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSSZ} %level [%logger] \(%thread\) %msg%n</Pattern>
+          </encoder>
+        </appender>
+        <root level="info">
+          <appender-ref ref="STDOUT" />
+        </root>
+      </configuration>
+  kind: ConfigMap
+  metadata:
+    labels:
+      app.kubernetes.io/component: api
+      app.kubernetes.io/instance: paascache-api-mdg-${TENANT_NAME}-${GROUP_NAME}-api
+      app.kubernetes.io/name: paascache-api
+      app.kubernetes.io/version: "1.0"
+      cm-type: logging
+    name: 'logback-mdg-${TENANT_NAME}-${GROUP_NAME}-api'
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig  
+  metadata:    
+    labels:      
+      app-type: jdk
+      app.kubernetes.io/component: api
+      app.kubernetes.io/instance: paascache-api-mdg-${TENANT_NAME}-${GROUP_NAME}-api      
+      app.kubernetes.io/name: paascache-api      
+      app.kubernetes.io/version: "1.0"      
+    name: mdg-${TENANT_NAME}-${GROUP_NAME}-api
+  spec:
+    replicas: 1
+    selector:
+      deploymentConfig: mdg-${TENANT_NAME}-${GROUP_NAME}-api
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources:
+        requests:
+          cpu: 83m
+          memory: 118Mi
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 50%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:        
+        labels:
+          app: mdg-${TENANT_NAME}-${GROUP_NAME}
+          template: paascache-group-template
+          template-version: 0.7.2  
+          app.kubernetes.io/version: "1.0"      
+          app.kubernetes.io/part-of: paascache
+          app.kubernetes.io/managed-by: paascache-api
+          cachebuckets.paascache.dsi.intesasanpaolo.com/tenant: ${TENANT_NAME}
+          cachebuckets.paascache.dsi.intesasanpaolo.com/group: ${GROUP_NAME}
+          app-type: jdk
+          app.kubernetes.io/component: api
+          app.kubernetes.io/instance: paascache-api-mdg-${TENANT_NAME}-${GROUP_NAME}-api          
+          app.kubernetes.io/name: paascache-api          
+          app.kubernetes.io/version: "1.0"      
+          deploymentConfig: mdg-${TENANT_NAME}-${GROUP_NAME}-api
+          log-version: "1.0"
+        name: mdg-${TENANT_NAME}-${GROUP_NAME}-api
+      spec:
+        containers:
+        - env:
+          - name: JAVA_OPTIONS
+            value: -Duser.timezone=Europe/Rome -Dapp-cfg.path=/usr/local/app-cfg/
+              -verbose:gc -Xloggc:/var/tmp/gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps
+              -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M
+              -Dambiente_ISP=${STAGE_ENV} -Dloader.main=com.intesasanpaolo.dsi.paascache.api.ApiApplication 
+          - name: JAVA_INITIAL_MEM_RATIO
+            value: "100"
+          - name: JAVA_MAX_MEM_RATIO
+            value: "60"
+          - name: GC_MAX_METASPACE_SIZE
+            value: "256"
+          - name: ISP_AMBIENTE
+            value: ${STAGE_ENV}
+          - name: HTTPS_PROXY
+          - name: https_proxy
+          - name: HTTP_PROXY
+          - name: http_proxy
+          - name: no_proxy
+            value: .svc,.cluster.local,.intesasanpaolo.com,.sanpaoloimi.com
+          - name: NO_PROXY
+            value: .svc,.cluster.local,.intesasanpaolo.com,.sanpaoloimi.com
+          - name: JAVA_MAIN_CLASS
+            value: org.springframework.boot.loader.PropertiesLauncher
+          - name: JAVA_CLASSPATH
+            value: '/usr/local/log:/deployments/paas/api-1.0.jar'
+          - name: PAAS_CACHE_TENANT
+            value: ${TENANT_NAME}
+          - name: PAAS_CACHE_GROUP
+            value: ${GROUP_NAME}
+          - name: PAAS_CACHE_CLUSTER_NAME
+            value: ${TENANT_NAME}-${GROUP_NAME}
+          - name: PAAS_CACHE_KUBERNETES_ENABLED
+            value: "true"
+          - name: PAAS_CACHE_KUBERNETES_SERVICE_NAME
+            value: mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+          - name: PAAS_CACHE_KUBERNETES_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: PAAS_CACHE_SECURITY_ENABLED
+            value: "true"
+          - name: PAAS_CACHE_SECURITY_CLIENT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: clientToken
+                name: ${TENANT_NAME}-${GROUP_NAME}-security-secret
+          image: '${DOCKER_REGISTRY_ENDPOINT}/${API_BASEIMAGE_NAMESPACE}/${API_BASEIMAGE}:${API_BASEIMAGE_TAG}'
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /actuator/health
+              port: 8090
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: mdg-${TENANT_NAME}-${GROUP_NAME}-api
+          ports:
+          - containerPort: ${API_CONTAINER_PORT}
+            name: http
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /actuator/health
+              port: 8090
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /usr/local/env
+            name: setenv
+          - mountPath: '/usr/local/log'
+            name: 'logback-properties'
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: mdg-${TENANT_NAME}
+        terminationGracePeriodSeconds: 75
+        volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+            - key: setenv-sh
+              path: setenv.sh
+            name: app-env-mdg-${TENANT_NAME}-${GROUP_NAME}-api-v1
+          name: setenv
+        - configMap:
+            defaultMode: 420
+            name: logback-mdg-${TENANT_NAME}-${GROUP_NAME}-api
+          name: logback-properties
+    test: false
+    triggers: 
+      - type: ConfigChange
+- apiVersion: v1
+  data:
+    logback.xml: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <configuration>
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+          <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSSZ} %level [%logger] \(%thread\) %msg%n</Pattern>
+          </encoder>
+        </appender>
+        <root level="info">
+          <appender-ref ref="STDOUT" />
+        </root>
+      </configuration>
+  kind: ConfigMap
+  metadata:
+    labels:
+      app.kubernetes.io/component: cluster
+      app.kubernetes.io/instance: paascache-cluster-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+      app.kubernetes.io/name: paascache-cluster
+      app.kubernetes.io/version: "1.0"
+      cm-type: logging
+    name: 'logback-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster'    
+- apiVersion: apps.openshift.io/v1
+  kind: DeploymentConfig  
+  metadata:
+    labels:
+      app-type: hazelcast
+      app.kubernetes.io/component: cluster
+      app.kubernetes.io/instance: paascache-cluster-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+      app.kubernetes.io/name: paascache-cluster
+      app.kubernetes.io/version: "1.0"
+    name: mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+  spec:
+    replicas: 3
+    selector:
+      deploymentConfig: mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources:
+        requests:
+          cpu: 83m
+          memory: 118Mi
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 0
+        maxUnavailable: 1
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:        
+        labels:
+          app: mdg-${TENANT_NAME}-${GROUP_NAME}
+          template: paascache-group-template
+          template-version: 0.7.2  
+          app.kubernetes.io/version: "1.0"      
+          app.kubernetes.io/part-of: paascache
+          app.kubernetes.io/managed-by: paascache-api
+          cachebuckets.paascache.dsi.intesasanpaolo.com/tenant: ${TENANT_NAME}
+          cachebuckets.paascache.dsi.intesasanpaolo.com/group: ${GROUP_NAME}
+          app-type: hazelcast
+          app.kubernetes.io/component: cluster
+          app.kubernetes.io/instance: paascache-cluster-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster          
+          app.kubernetes.io/name: paascache-cluster          
+          app.kubernetes.io/version: "1.0"      
+          deploymentConfig: mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+          log-version: "1.0"
+        name: mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+      spec:
+        containers:
+        - env:
+          - name: JAVA_OPTIONS
+            value: -Duser.timezone=Europe/Rome -Dapp-cfg.path=/usr/local/app-cfg/
+              -verbose:gc -Xloggc:/var/tmp/gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps
+              -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=5 -XX:GCLogFileSize=3M
+              -Dambiente_ISP=${STAGE_ENV} -Dloader.main=com.intesasanpaolo.dsi.paascache.cluster.ClusterApplication
+              -Dhazelcast.shutdownhook.policy=GRACEFUL
+              -Dhazelcast.graceful.shutdown.max.wait=300
+          - name: JAVA_INITIAL_MEM_RATIO
+            value: "100"
+          - name: JAVA_MAX_MEM_RATIO
+            value: "60"
+          - name: GC_MAX_METASPACE_SIZE
+            value: "256"
+          - name: ISP_AMBIENTE
+            value: ${STAGE_ENV}
+          - name: HTTPS_PROXY
+          - name: https_proxy
+          - name: HTTP_PROXY
+          - name: http_proxy
+          - name: no_proxy
+            value: .svc,.cluster.local,.intesasanpaolo.com,.sanpaoloimi.com
+          - name: NO_PROXY
+            value: .svc,.cluster.local,.intesasanpaolo.com,.sanpaoloimi.com
+          - name: JAVA_MAIN_CLASS
+            value: org.springframework.boot.loader.PropertiesLauncher
+          - name: JAVA_CLASSPATH
+            value: '/usr/local/log:/deployments/paas/cluster-1.0.jar'
+          - name: PAAS_CACHE_INSTANCE_NAME
+            value: paascache-cluster-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+          - name: PAAS_CACHE_CLUSTER_NAME
+            value: ${TENANT_NAME}-${GROUP_NAME}
+          - name: PAAS_CACHE_LICENSE_KEY
+            valueFrom:
+              secretKeyRef:
+                key: key
+                name: hz-license-key-secret
+          - name: PAAS_CACHE_KUBERNETES_ENABLED
+            value: "true"
+          - name: PAAS_CACHE_KUBERNETES_SERVICE_NAME
+            value: mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+          - name: PAAS_CACHE_KUBERNETES_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: PAAS_CACHE_SECURITY_ENABLED
+            value: "true"
+          - name: PAAS_CACHE_SECURITY_MEMBER_REALM_NAME
+            valueFrom:
+              secretKeyRef:
+                key: memberRealmName
+                name: ${TENANT_NAME}-${GROUP_NAME}-security-secret
+          - name: PAAS_CACHE_SECURITY_MEMBER_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: memberToken
+                name: ${TENANT_NAME}-${GROUP_NAME}-security-secret
+          - name: PAAS_CACHE_SECURITY_CLIENT_REALM_NAME
+            valueFrom:
+              secretKeyRef:
+                key: clientRealmName
+                name: ${TENANT_NAME}-${GROUP_NAME}-security-secret
+          - name: PAAS_CACHE_SECURITY_CLIENT_TOKEN
+            valueFrom:
+              secretKeyRef:
+                key: clientToken
+                name: ${TENANT_NAME}-${GROUP_NAME}-security-secret
+          - name: PAAS_CACHE_BUCKETS_CONFIG_FOLDER
+            value: /deployments/buckets
+          image: '${DOCKER_REGISTRY_ENDPOINT}/${CLUSTER_BASEIMAGE_NAMESPACE}/${CLUSTER_BASEIMAGE}:${CLUSTER_BASEIMAGE_TAG}'
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /hazelcast/health/node-state
+              port: 5701
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+          ports:
+          - containerPort: ${API_CONTAINER_PORT}
+            name: http
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /hazelcast/health/node-state
+              port: 5701
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /usr/local/env
+            name: setenv
+          - mountPath: '/usr/local/log'
+            name: 'logback-properties'
+          - mountPath: /deployments/buckets
+            name: buckets
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        serviceAccount: mdg-${TENANT_NAME}
+        terminationGracePeriodSeconds: 75
+        volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+            - key: setenv-sh
+              path: setenv.sh
+            name: app-env-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster-v1
+          name: setenv
+        - configMap:
+            defaultMode: 420
+            name: logback-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+          name: logback-properties
+        - configMap:
+            defaultMode: 420
+            name: buckets-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster-v1
+          name: buckets
+    test: false
+    triggers: 
+      - type: ConfigChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      description: The web server's http port.    
+    labels:
+      app-type: jdk
+      app.kubernetes.io/component: api
+      app.kubernetes.io/instance: paascache-api-mdg-${TENANT_NAME}-${GROUP_NAME}-api      
+      app.kubernetes.io/name: paascache-api      
+      app.kubernetes.io/version: "1.0"      
+    name: mdg-${TENANT_NAME}-${GROUP_NAME}-api
+  spec:
+    ports:
+    - port: ${API_CONTAINER_PORT}
+      protocol: TCP
+      targetPort: ${{API_CONTAINER_PORT}}
+    selector:
+      deploymentConfig: mdg-${TENANT_NAME}-${GROUP_NAME}-api
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      description: Exposes and load balances the application pods    
+    labels:
+      app-type: hazelcast
+      app.kubernetes.io/component: cluster
+      app.kubernetes.io/instance: paascache-cluster-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster      
+      app.kubernetes.io/name: paascache-cluster      
+      app.kubernetes.io/version: "1.0"      
+    name: mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+  spec:
+    clusterIP: None
+    ports:
+    - port: ${CLUSTER_CONTAINER_PORT}
+      protocol: TCP
+      targetPort: ${{CLUSTER_CONTAINER_PORT}}
+    selector:
+      deploymentConfig: mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    annotations:
+      description: Route for application's http service.
+      openshift.io/host.generated: "true"
+      haproxy.router.openshift.io/balance: roundrobin
+    labels:
+      app-type: jdk
+      app.kubernetes.io/component: api
+      app.kubernetes.io/instance: paascache-api-mdg-${TENANT_NAME}-${GROUP_NAME}-api      
+      app.kubernetes.io/name: paascache-api      
+      app.kubernetes.io/version: "1.0"      
+    name: mdg-${TENANT_NAME}-${GROUP_NAME}-api
+  spec:    
+    host: '${API_HTTP_HOSTNAME}'
+    path: '${API_PATH_HTTP}'
+    to:
+      kind: Service
+      name: mdg-${TENANT_NAME}-${GROUP_NAME}-api
+      weight: 100
+    wildcardPolicy: None
+- apiVersion: v1
+  data:
+    setenv-sh: ""
+  kind: ConfigMap
+  metadata:    
+    labels:
+      app-type: jdk
+      app.kubernetes.io/component: api
+      app.kubernetes.io/instance: paascache-api-mdg-${TENANT_NAME}-${GROUP_NAME}-api      
+      app.kubernetes.io/name: paascache-api      
+      app.kubernetes.io/version: "1.0"
+      cm-type: environment      
+    name: app-env-mdg-${TENANT_NAME}-${GROUP_NAME}-api-v1
+- apiVersion: v1
+  data:
+    setenv-sh: ""
+  kind: ConfigMap
+  metadata:    
+    labels:
+      app-type: hazelcast
+      app.kubernetes.io/component: cluster
+      app.kubernetes.io/instance: paascache-cluster-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster      
+      app.kubernetes.io/name: paascache-cluster      
+      app.kubernetes.io/version: "1.0"
+      cm-type: environment      
+    name: app-env-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster-v1
+- apiVersion: v1
+  data:
+  kind: ConfigMap
+  metadata:
+    labels:
+      app-type: hazelcast
+      app.kubernetes.io/component: cluster
+      app.kubernetes.io/instance: paascache-cluster-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster
+      app.kubernetes.io/name: paascache-cluster
+      app.kubernetes.io/version: "1.0"
+      cm-type: environment
+    name: buckets-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster-v1
+- apiVersion: v1
+  stringData:
+    clientRealmName: ${TENANT_NAME}-${GROUP_NAME}
+    clientToken: ${SECURITY_CLIENT_TOKEN}
+    memberRealmName: ${TENANT_NAME}-${GROUP_NAME}
+    memberToken: ${SECURITY_MEMBER_TOKEN}
+  kind: Secret
+  metadata:
+    creationTimestamp: null
+    labels:
+      app-type: hazelcast
+      app.kubernetes.io/component: cluster
+      app.kubernetes.io/instance: paascache-cluster-mdg-${TENANT_NAME}-${GROUP_NAME}-cluster      
+      app.kubernetes.io/name: paascache-cluster      
+      app.kubernetes.io/version: "1.0"
+      cm-type: environment      
+    name: ${TENANT_NAME}-${GROUP_NAME}-security-secret
+  type: Opaque
+parameters:
+  - description: The PaaS Cache Tenant's name
+    name: TENANT_NAME
+    required: true
+  - description: The PaaS Cache Group's name
+    name: GROUP_NAME
+    required: true
+  - description: 'stage name. exaple: svil, test, prod'
+    name: STAGE_ENV
+    required: true
+    value: svil
+  - description: Docker Registry Endpoint
+    name: DOCKER_REGISTRY_ENDPOINT
+    required: true
+    value: docker-registry.default.svc:5000
+  - description: The PaaS Cache Group API's base image namespace
+    name: API_BASEIMAGE_NAMESPACE
+    required: true
+    value: cicd
+  - description: The PaaS Cache Group API's base image
+    name: API_BASEIMAGE
+    required: true
+    value: paascache-api-isp
+  - description: The PaaS Cache Group API's base image tag
+    name: API_BASEIMAGE_TAG
+    required: true
+    value: 0.7.6
+  - description: The PaaS Cache Group IMDG cluster's base image namespace
+    name: CLUSTER_BASEIMAGE_NAMESPACE
+    required: true
+    value: cicd
+  - description: The PaaS Cache Group IMDG cluster's base image
+    name: CLUSTER_BASEIMAGE
+    required: true
+    value: paascache-cluster-isp
+  - description: The PaaS Cache Group IMDG cluster's base image tag
+    name: CLUSTER_BASEIMAGE_TAG
+    required: true
+    value: 0.7.6
+  - description: PaaS Cache Group API container's port
+    name: API_CONTAINER_PORT
+    required: true
+    value: '8080'
+  - description: PaaS Cache Group IMDG cluster container's port
+    name: CLUSTER_CONTAINER_PORT
+    required: true
+    value: '5701'
+  - description: >-
+      Custom hostname for API service route. Leave blank for default hostname,
+      e.g.: <route-name>-<project>.<default-domain-suffix>
+    name: API_HTTP_HOSTNAME
+  - description: >-
+      API http url path. Must be equal to the context of the application. example:
+      /mycontext
+    name: API_PATH_HTTP
+    value: ''
+  - description: Security IMDG Client Token Base64-encoded value
+    name: SECURITY_CLIENT_TOKEN
+    required: true
+    value: WlkwR2xNMnk1eTczMnlJdkViTkc=
+  - description: Security IMDG Server Token Base64-encoded value
+    name: SECURITY_MEMBER_TOKEN
+    required: true
+    value: WlkwR2xNMnk1eTczMnlJdkViTkc=
