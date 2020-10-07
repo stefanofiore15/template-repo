@@ -1,0 +1,13 @@
+hazelcast-client:
+  properties:
+    hazelcast.logging.type: slf4j
+  cluster-name: datagrid-default
+  network:
+    kubernetes:
+      enabled: true
+      namespace: mdg-svil
+      service-name: mdg-datagrid-default-cluster
+  security:
+    token:            
+      value: ${datagrid_default_PAAS_CACHE_SECURITY_CLIENT_TOKEN}
+      encoding: base64

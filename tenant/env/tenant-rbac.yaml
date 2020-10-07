@@ -1,0 +1,37 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: mdg-datagrid
+    app.kubernetes.io/managed-by: paascache-api
+    app.kubernetes.io/part-of: paascache
+    app.kubernetes.io/version: "1.0"
+    cachebuckets.paascache.dsi.intesasanpaolo.com/tenant: ${TENANT_NAME}
+    template: paascache-tenant-template
+    template-version: 0.8-0
+  name: mdg-mdg-${ENVIROMENT}-${TENANT_NAME}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: hazelcast-enterprise-isp
+subjects:
+- kind: ServiceAccount
+  name: mdg-${TENANT_NAME}
+  namespace: mdg-${ENVIROMENT}
+---
+apiVersion: authorization.openshift.io/v1
+groupNames:
+- system:serviceaccounts:mdg-${ENVIROMENT}
+kind: RoleBinding
+metadata:
+  annotations:
+    openshift.io/description: Allows all pods in this namespace to pull images from
+      this namespace.  It is auto-managed by a controller; remove subjects to disable.
+  name: system:image-pullers
+  namespace: mdg-${ENVIROMENT}
+roleRef:
+  name: system:image-puller
+subjects:
+- kind: SystemGroup
+  name: system:serviceaccounts:mdg-${ENVIROMENT}
+userNames: null

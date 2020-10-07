@@ -1,0 +1,9 @@
+---
+- op: add
+  path: "/spec/template/spec/containers/0/env/-"
+  value:
+    name: datagrid_default_PAAS_CACHE_SECURITY_CLIENT_TOKEN
+    valueFrom:
+      secretKeyRef:
+        key: clientToken
+        name: datagrid-default-security-secret

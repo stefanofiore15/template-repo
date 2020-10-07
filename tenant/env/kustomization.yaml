@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: mdg-${ENVIROMENT}
+
+bases:
+
+resources:
+- namespace.yaml
+- tenant-${TENANT_NAME}-rbac.yaml
+
+images:
+- name: docker-registry.default.svc:5000/cicd/hazelcast-management-center-isp
+  newName: image-registry.openshift-image-registry.svc:5000/cicd/hazelcast-management-center-isp  
+  newTag: 2.4.2020.08.1-1
+- name: docker-registry.default.svc:5000/cicd/paascache-api-isp
+  newName: image-registry.openshift-image-registry.svc:5000/cicd/paascache-api-isp
+  newTag: 0.7.6
+- name: docker-registry.default.svc:5000/cicd/paascache-cluster-isp
+  newName: image-registry.openshift-image-registry.svc:5000/cicd/paascache-cluster-isp
+  newTag: 0.7.6
+
+patchesJson6902:
+- path: add_default_clientToken_to_datagrid_mancenter.yaml
+  target:
+    group: apps.openshift.io
+    version: v1
+    kind: DeploymentConfig
+    name: mdg-datagrid-hazelcast-management-center
+
+configMapGenerator:
+- name: app-env-mdg-datagrid-hazelcast-management-center-v1
+  behavior: merge
+  files:
+    - MC-Client-mdg-datagrid-default-cluster.yaml

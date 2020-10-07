@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mdg-${TENANT_NAMESPACE}
+  annotations:
+    openshift.io/description: Managed Data Grid Lab
+    openshift.io/display-name: MDG-${TENANT_NAMESPACE}
+spec:
+  finalizers:
+    - kubernetes 
