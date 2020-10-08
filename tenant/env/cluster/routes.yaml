@@ -1,0 +1,6 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mdg-${TENANT_NAME}-hazelcast-management-center
+spec:
+  host: mdg-${TENANT_NAME}-mdg-${ENVIROMENT}.apps.${REGION}.intesasanpaolo.com
