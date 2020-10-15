@@ -1,0 +1,13 @@
+{
+    "name":"app.${BUCKET_NAME}",
+    "evictionPolicy":"${EVITION_POLICY}",
+    "backupCount":${BACKUP_COUNT},
+    "maxSize":${MAX_SIZE},
+    "maxSizePolicy":"USED_HEAP_SIZE",
+    "timeToLiveSeconds":${TIME_TO_LIVE_SECONDS},
+    "indexes":[
+      "name",
+      "surname",
+      "email"
+    ]
+  }
