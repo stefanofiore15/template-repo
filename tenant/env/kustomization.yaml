@@ -19,17 +19,3 @@ images:
 - name: docker-registry.default.svc:5000/cicd/paascache-cluster-isp
   newName: image-registry.openshift-image-registry.svc:5000/cicd/paascache-cluster-isp
   newTag: 0.7.6
-
-patchesJson6902:
-- path: add_default_clientToken_to_datagrid_mancenter.yaml
-  target:
-    group: apps.openshift.io
-    version: v1
-    kind: DeploymentConfig
-    name: mdg-datagrid-hazelcast-management-center
-
-configMapGenerator:
-- name: app-env-mdg-datagrid-hazelcast-management-center-v1
-  behavior: merge
-  files:
-    - MC-Client-mdg-datagrid-default-cluster.yaml
